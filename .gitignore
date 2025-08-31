@@ -10,6 +10,12 @@
 # PostgreSQL 데이터 볼륨 폴더
 /postgres_data/
 
+# grafana 데이터 볼륨 폴더
+/grafana_data/
+
+# /prometheus 데이터 볼륨 폴더
+/prometheus_data/
+
 # Python 가상환경 및 캐시 파일
 venv/
 __pycache__/
