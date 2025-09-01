@@ -1,17 +1,17 @@
 ## SimpleVideoStreamingService
 
-서버 실행
+ffmpeg 클라인언트 설치 (srt 프로토콜을 이용한 실시간 영상 전송)
 
 ```bash
-docker compose up --build
+brew install ffmpeg
 ```
 
 &nbsp;
 
-srt 프로토콜을 이용한 실시간 영상 전송(ffmpeg를 이용)
+서버 실행
 
 ```bash
-brew install ffmpeg
+docker compose up --build
 ```
 
 &nbsp;
@@ -31,3 +31,8 @@ ffmpeg -f avfoundation -framerate 30 -video_size 1280x720 -i "0:0" -c:v libx264 
 ```
 
 &nbsp;
+
+## 실시간 영상 스트리밍
+```bash
+http://127.0.0.1:8000/viewer/{stream_id}
+```

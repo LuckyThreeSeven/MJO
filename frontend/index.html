@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MPEG-DASH Live Viewer</title>
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #222; color: #eee; }
+        h1 { font-weight: 300; }
+        video { width: 80%; max-width: 960px; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+    <h1>MPEG-DASH Live Viewer</h1>
+    <video id="videoPlayer" controls autoplay muted></video>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const video = document.querySelector("#videoPlayer");
+            const streamId = window.location.pathname.split('/').pop();
+            const url = `/static/live/${streamId}/live.mpd`; // .mpd 파일 경로
+
+            // dash.js 플레이어 초기화
+            const player = dashjs.MediaPlayer().create();
+            player.initialize(video, url, true);
+
+            // 저지연을 위한 설정
+            player.updateSettings({
+                'streaming': {
+                    'lowLatencyEnabled': true,
+                    'liveDelay': 2 // 2초 지연을 목표로 설정
+                }
+            });
+
+            console.log("DASH player initialized for URL:", url);
+        });
+    </script>
+</body>
+</html>

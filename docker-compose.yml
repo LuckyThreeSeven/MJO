@@ -23,6 +23,7 @@ services:
     volumes:
       - ./app:/app
       - ./recordings:/recordings # 녹화 폴더를 컨테이너와 공유
+      - ./frontend:/frontend
     ports:
       - "8000:8000" # FastAPI API 포트
       - "9000:9000/udp" # SRT 스트림 수신 포트
