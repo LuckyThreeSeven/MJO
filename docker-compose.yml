@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:14-alpine
@@ -15,48 +17,78 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   api:
     container_name: srt_api
-    build: ./app  # app/Dockerfile을 사용하여 이미지 빌드
+    build: ./app
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     volumes:
       - ./app:/app
-      - ./recordings:/recordings # 녹화 폴더를 컨테이너와 공유
-      - ./frontend:/frontend
+      - ./recordings:/recordings
+      - ./frontend:/frontend # 뷰어는 사용하지 않지만, 폴더는 유지
     ports:
-      - "8000:8000" # FastAPI API 포트
-      - "9000:9000/udp" # SRT 스트림 수신 포트
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://user:password@db/videodb
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
-# 모니터링 
+  # --- MP4 녹화 전용 FFmpeg 리스너 (수정됨) ---
+  srt-listener:
+    image: jrottenberg/ffmpeg:5.0-ubuntu
+    container_name: srt_listener
+    # 복잡한 tee muxer를 제거하고 segment 기능에만 집중
+    command:
+      - -i
+      - "srt://:9000?mode=listener&transtype=live&latency=1000000"
+      - -c
+      - copy # 클라이언트 인코딩을 그대로 사용
+      - -map
+      - "0"
+      - -f
+      - segment
+      - -segment_time
+      - "10"
+      - -strftime
+      - "1"
+      - -reset_timestamps
+      - "1"
+      - -segment_format
+      - mp4
+      - -movflags
+      - +frag_keyframe+empty_moov
+      - /recordings/segments/rec-%Y%m%d_%H%M%S.mp4
+    ports:
+      - "9000:9000/udp"
+    volumes:
+      - ./recordings:/recordings
+    restart: always
+
+  # --- 모니터링 서비스 (기존과 동일) ---
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml # 설정 파일 마운트
-      - ./prometheus_data:/prometheus # 데이터 저장 볼륨
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     ports:
       - "9090:9090"
     restart: unless-stopped
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     volumes:
-      - ./grafana_data:/var/lib/grafana # 대시보드 등 설정 저장 볼륨
+      - ./grafana_data:/var/lib/grafana
     ports:
       - "3000:3000"
     depends_on:
       - prometheus
     restart: unless-stopped
-
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
@@ -68,7 +100,6 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
-
   node_exporter:
     image: prom/node-exporter:latest
     container_name: node_exporter
@@ -85,3 +116,4 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+
