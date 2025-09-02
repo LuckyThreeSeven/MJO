@@ -1,0 +1,87 @@
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: srt_db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=videodb
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d videodb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    container_name: srt_api
+    build: ./app  # app/Dockerfile을 사용하여 이미지 빌드
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./app:/app
+      - ./recordings:/recordings # 녹화 폴더를 컨테이너와 공유
+      - ./frontend:/frontend
+    ports:
+      - "8000:8000" # FastAPI API 포트
+      - "9000:9000/udp" # SRT 스트림 수신 포트
+    environment:
+      - DATABASE_URL=postgresql://user:password@db/videodb
+    depends_on:
+      db:
+        condition: service_healthy
+
+# 모니터링 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml # 설정 파일 마운트
+      - ./prometheus_data:/prometheus # 데이터 저장 볼륨
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - ./grafana_data:/var/lib/grafana # 대시보드 등 설정 저장 볼륨
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro'
+    ports:
+      - "9100:9100"
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:

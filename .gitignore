@@ -1,0 +1,22 @@
+# Docker 및 시스템 관련 파일
+.DS_Store
+.env
+
+# recordings 폴더 내부의 모든 파일을 무시 (폴더 자체는 유지)
+# 단, .gitkeep 파일을 두어 빈 폴더도 Git에 포함시킬 수 있음
+/recordings/*
+!/recordings/.gitkeep
+
+# PostgreSQL 데이터 볼륨 폴더
+/postgres_data/
+
+# grafana 데이터 볼륨 폴더
+/grafana_data/
+
+# /prometheus 데이터 볼륨 폴더
+/prometheus_data/
+
+# Python 가상환경 및 캐시 파일
+venv/
+__pycache__/
+*.pyc
